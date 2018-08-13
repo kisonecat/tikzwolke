@@ -41,7 +41,7 @@ config.root = process.env.ROOT_URL || ('http://localhost:' + config.port);
 
 config.logging = false;
 
-config.rateLimit = 1000;
+config.rateLimit = 100;
 
 /**
  * Database Configuration
@@ -53,6 +53,11 @@ config.redis.port     = process.env.REDIS_PORT || 6379;
 config.redis.database = process.env.REDIS_DATABASE || 3;
 
 /**
+ * Remote logging configuration
+ */
+config.logging = true;
+
+/**
  * Session Configuration
  */
 
@@ -61,3 +66,4 @@ var day               = (hour * 24);
 var week              = (day * 7);
 
 module.exports = config;
+

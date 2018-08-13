@@ -4,8 +4,13 @@ const kue = require('kue');
 const path = require('path');
 const fs = require('fs');
 const spawn = require('child_process').spawn;
-const redis = require("redis");
 const config = require('./config');
+const winston = require('winston');
+const expressWinston = require('express-winston');
+const rateLimit = require('express-rate-limit');
+
+// Setup redis
+const redis = require("redis");
 
 var client = redis.createClient({
     host: config.redis.host,
@@ -14,18 +19,11 @@ var client = redis.createClient({
 });
 
 client.on("error", function (err) {
-    console.log("Error " + err);
+    winston.error(err);
 });
 
+// Setup express
 const app = express();
-
-var jobs = kue.createQueue({
-    redis: {
-	host: config.redis.host,
-	port: config.redis.port,
-	db: config.redis.database
-    }
-});
 
 // basically ignore CORS for now
 app.use(function(req, res, next) {
@@ -36,6 +34,27 @@ app.use(function(req, res, next) {
 
 // Should have an actual "what is this project?" page
 app.get('/', (req, res) => res.send('Hello World!'));
+
+if (config.logging) {
+    app.use(expressWinston.logger({
+	transports: [
+	    new winston.transports.Console({
+		json: true,
+		colorize: true
+	    })	    
+	],
+	expressFormat: true, // Use the default Express/morgan request formatting. Enabling this will override any msg if true. Will only output colors with colorize set to true
+	colorize: true, // Color the text and status code, using the Express/morgan color palette (text: gray, status: default green, 3XX cyan, 4XX yellow, 5XX red).
+    }));
+}
+
+var jobs = kue.createQueue({
+    redis: {
+	host: config.redis.host,
+	port: config.redis.port,
+	db: config.redis.database
+    }
+});
 
 jobs.process('tikz', function(job, done){
     var args = [ '-hda',
@@ -59,16 +78,16 @@ jobs.process('tikz', function(job, done){
 
     var errored = undefined;
     
-    // Kill the process unless it outputs something every couple seconds
+    // Kill the process unless it outputs something every seconds
     var watchdog;
     function resetWatchdog() {
 	if (watchdog) watchdog.close();	
-	watchdog = setTimeout( function() { errored = "output too slow"; ps.kill(); }, 2000 );
+	watchdog = setTimeout( function() { errored = "output too slow"; ps.kill(); }, 1000 );
     }
     resetWatchdog();
     
     function processLine(line) {
-	console.log(" >",line);
+	winston.debug(" >",line);
 	resetWatchdog();
 
 	if (line.match( "@@@ finished" )) {
@@ -76,8 +95,8 @@ jobs.process('tikz', function(job, done){
 	}
     }
 
-    // Only give it 15 seconds total
-    setTimeout( function() { errored = "pdflatex took too long"; ps.kill(); }, 15000 );
+    // Only give it 10 seconds total
+    setTimeout( function() { errored = "pdflatex took too long"; ps.kill(); }, 10000 );
 
     // Split the output into lines so we can process the output one line at a time
     var remainder = new Buffer('');
@@ -99,7 +118,7 @@ jobs.process('tikz', function(job, done){
     // When the process exits, we can try to read the file
     ps.on( 'exit', function() {
 	if (errored) {
-	    console.log("error: ",errored);
+	    winston.error(errored);
 	    done(errored);
 	} else {
 	    fs.readFile(outputFilename, 'utf-8', function(err, contents) {
@@ -145,6 +164,14 @@ app.get('/sha1/:hash', function(req, res) {
 	}
     });
 });
+
+var limiter = new rateLimit({
+    windowMs: 15*60*1000, // 15 minutes 
+    max: config.rateLimit, // limit each IP to so many requests per window
+    delayMs: 0 // full speed until the max limit is reached
+});
+
+app.use( '/sha1/:hash', limiter );
 
 // I could rate-limit this by demanding the client provide some
 // hashcash, say that the client must provide a string X so that
@@ -206,7 +233,7 @@ app.post('/sha1/:hash', function(req, res) {
 app.use(express.static('public'));
 
 client.select(config.redis.database, function() {
-    app.listen(3000, () => console.log('tikzwolke listening on port 3000'));
+    app.listen(3000, () => winston.info('tikzwolke listening on port 3000'));
 });
 
 
