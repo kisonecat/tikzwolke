@@ -1,8 +1,17 @@
 // Determine where we were loaded from; we'll use that to find a
 // tikzwolke server that can handle our POSTing tikz code
-var scripts = document.getElementsByTagName( "script" ); 
-var lastScript = scripts[scripts.length - 1]; 
-var url = new URL(lastScript.src);
+var currentScript = undefined;
+
+if (document.currentScript) {
+    currentScript = document.currentScript;
+} else {
+    currentScript = document.currentScript;
+    var scripts = document.getElementsByTagName( "script" ); 
+    currentScript = scripts[scripts.length - 1];
+}
+
+// BADBAD: apparently URL isn't available on IE11
+var url = new URL(currentScript.src);
 var urlRoot = url.protocol + "//" + url.hostname;
 if (url.port) {
     urlRoot = urlRoot + ":" + url.port;
