@@ -5,8 +5,14 @@ const path = require('path');
 const fs = require('fs');
 const spawn = require('child_process').spawn;
 const redis = require("redis");
+const config = require('./config');
 
-var client = redis.createClient({return_buffers: true});
+var client = redis.createClient({
+    host: config.redis.host,
+    port: config.redis.port,
+    max_attempts: 5,
+    return_buffers: true
+});
 
 client.on("error", function (err) {
     console.log("Error " + err);
@@ -14,12 +20,11 @@ client.on("error", function (err) {
 
 const app = express();
 
-// BADBAD: should move this to a config stanza
 var jobs = kue.createQueue({
     redis: {
-	port: 6379,
-	host: '127.0.0.1',
-	db: 3
+	host: config.redis.host,
+	port: config.redis.port,
+	db: config.redis.database
     }
 });
 
@@ -125,16 +130,15 @@ jobs.process('tikz', function(job, done){
 app.get('/sha1/:hash', function(req, res) {
     var hash = req.params.hash;
     var hashFunction = 'sha1';
-    var multihash = hashFunction + ":" + hash;
+    var multihash = hashFunction + "/" + hash;
 
-    console.log( "GETTING " + multihash );
-    
     client.get(multihash, function (err, val) {
 	if (err) {
 	    res.status(500).send(err);
 	} else {
 	    if (val) {
 		res.setHeader('content-type', 'image/svg+xml');
+		res.set('Cache-Control', 'public, max-age=31536000');
 		res.send(val);
 	    } else {
 		res.status(404).send("Cached content not found.");		
@@ -151,10 +155,8 @@ app.get('/sha1/:hash', function(req, res) {
 app.post('/sha1/:hash', function(req, res) {
     var hash = req.params.hash;
     var hashFunction = 'sha1';
-    var multihash = hashFunction + ":" + hash;
+    var multihash = hashFunction + "/" + hash;
 
-    console.log( "POSTING " + multihash );    
-    
     // if the hash is available, just serve the .svg immediately and
     // don't even bother receiving any data from the client
     client.get(multihash, function (err, val) {
@@ -204,7 +206,7 @@ app.post('/sha1/:hash', function(req, res) {
 // BADBAD: include a version number
 app.use(express.static('public'));
 
-client.select(3, function() {
+client.select(config.redis.database, function() {
     app.listen(3000, () => console.log('tikzwolke listening on port 3000'));
 });
 
