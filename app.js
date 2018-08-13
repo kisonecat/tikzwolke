@@ -4,12 +4,15 @@ const kue = require('kue');
 const path = require('path');
 const fs = require('fs');
 const spawn = require('child_process').spawn;
+const redis = require("redis");
+
+var client = redis.createClient({return_buffers: true});
+
+client.on("error", function (err) {
+    console.log("Error " + err);
+});
 
 const app = express();
-
-//var redis = require('redis');
-// create a new redis client and connect to our local redis instance
-//var client = redis.createClient({return_buffers: true});
 
 // BADBAD: should move this to a config stanza
 var jobs = kue.createQueue({
@@ -106,7 +109,8 @@ jobs.process('tikz', function(job, done){
 		// should base64 decode this data
 		done(null,svg);
 		
-		// should send this to redis too
+		// cache this in redis too
+		client.set( job.data.hash, svg );
 	    });
 	}	       
     });
@@ -128,50 +132,58 @@ app.post('/sha1/:hash', function(req, res) {
     var hashFunction = 'sha1';
     var multihash = hashFunction + ":" + hash;
     
-    // BADBAD: if the hash is available, just serve the .svg
-    // immediately and don't even bother receiving any data from the
-    // client
-    
-    // we haven't already processed this image, so 
-
-    var shasum = crypto.createHash('sha1');
-    
-    var data = "";
-    
-    req.on('data', function( chunk ) {
-	shasum.update(chunk);
-	data += chunk;
-    });
-    req.on('end', function() {
-	var computedHash = shasum.digest('hex');
-
-	if (computedHash === hash) {
-	    var job = jobs.create( 'tikz', { body: data, hash: multihash } )
-		.ttl( 30 * 1000 ) // value in milliseconds
-		.removeOnComplete( true )
-		.save(function(err) {
-		    if (err) {
-			res.status(500).send(err);
-		    }
-		});
-
-	    job.on('error', function(err){
-		res.status(500).send(err);
-	    });
-	    
-	    job.on('complete', function(result){
-		res.setHeader('content-type', 'image/svg+xml');
-		res.send(result);
-	    });
-	    
+    // if the hash is available, just serve the .svg immediately and
+    // don't even bother receiving any data from the client
+    client.get(multihash, function (err, val) {
+	if (val) {
+	    res.setHeader('content-type', 'image/svg+xml');
+	    res.send(val);	    
 	} else {
-	    res.status(500).send("The provided hash does not match the provided content.");
+	    // we haven't already processed this image, so process it.
+	    var shasum = crypto.createHash('sha1');
+    
+	    var data = "";
+    
+	    req.on('data', function( chunk ) {
+		shasum.update(chunk);
+		data += chunk;
+	    });
+	    req.on('end', function() {
+		var computedHash = shasum.digest('hex');
+		
+		if (computedHash === hash) {
+		    var job = jobs.create( 'tikz', { body: data, hash: multihash } )
+			.ttl( 30 * 1000 ) // value in milliseconds
+			.removeOnComplete( true )
+			.save(function(err) {
+			    if (err) {
+				res.status(500).send(err);
+			    }
+			});
+		    
+		    job.on('error', function(err){
+			res.status(500).send(err);
+		    });
+		    
+		    job.on('complete', function(result){
+			res.setHeader('content-type', 'image/svg+xml');
+			res.send(result);
+		    });
+		    
+		} else {
+		    res.status(500).send("The provided hash does not match the provided content.");
+		}
+	    });
 	}
     });
 });
+	      
 
 app.use(express.static('public'));
 
-app.listen(3000, () => console.log('tikzwolke listening on port 3000'));
+client.select(3, function() {
+    app.listen(3000, () => console.log('tikzwolke listening on port 3000'));
+});
+
 
 
