@@ -1,7 +1,7 @@
 # TikZ Wolke
 
-TikZ Wolke is a cloud-based service which converts `script` tags
-(containing TikZ code) into SVGs.
+TikZ Wolke is a service which converts `script` tags (containing TikZ
+code) into SVGs.
 
 ## Example
 
@@ -17,6 +17,6 @@ Then in the `<body>`, include TikZ code such as
   \end{tikzpicture}
 </script>
 ```
-This TikZ will be compiled (on the tikzwolke.com server) into SVGs;
+Your TikZ will be compiled (on the tikzwolke.com server) into SVGs;
 the `<script>` element will be replaced with the corresponding SVG.
 
