@@ -122,6 +122,27 @@ jobs.process('tikz', function(job, done){
     
 });
 
+app.get('/sha1/:hash', function(req, res) {
+    var hash = req.params.hash;
+    var hashFunction = 'sha1';
+    var multihash = hashFunction + ":" + hash;
+
+    console.log( "GETTING " + multihash );
+    
+    client.get(multihash, function (err, val) {
+	if (err) {
+	    res.status(500).send(err);
+	} else {
+	    if (val) {
+		res.setHeader('content-type', 'image/svg+xml');
+		res.send(val);
+	    } else {
+		res.status(404).send("Cached content not found.");		
+	    }
+	}
+    });
+});
+
 // I could rate-limit this by demanding the client provide some
 // hashcash, say that the client must provide a string X so that
 // hash+X itself hases to 0000...  This could actually control the
@@ -131,13 +152,15 @@ app.post('/sha1/:hash', function(req, res) {
     var hash = req.params.hash;
     var hashFunction = 'sha1';
     var multihash = hashFunction + ":" + hash;
+
+    console.log( "POSTING " + multihash );    
     
     // if the hash is available, just serve the .svg immediately and
     // don't even bother receiving any data from the client
     client.get(multihash, function (err, val) {
-	if (val) {
+	if ((!err) && (val)) {
 	    res.setHeader('content-type', 'image/svg+xml');
-	    res.send(val);	    
+	    res.send(val);
 	} else {
 	    // we haven't already processed this image, so process it.
 	    var shasum = crypto.createHash('sha1');
@@ -177,7 +200,6 @@ app.post('/sha1/:hash', function(req, res) {
 	}
     });
 });
-	      
 
 // BADBAD: include a version number
 app.use(express.static('public'));
