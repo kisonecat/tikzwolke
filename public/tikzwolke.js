@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
 
+	    // BADBAD: should FIRST try a GET, and if that fails, then
+	    // generate hashcash for a higher-priority POST
 	    var xhr = new XMLHttpRequest();
 
 	    xhr.open('POST', "http://localhost:3000/sha1/" + hexhash);

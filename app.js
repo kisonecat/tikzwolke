@@ -179,6 +179,7 @@ app.post('/sha1/:hash', function(req, res) {
 });
 	      
 
+// BADBAD: include a version number
 app.use(express.static('public'));
 
 client.select(3, function() {
