@@ -92,6 +92,7 @@ jobs.process('tikz', function(job, done){
     // When the process exits, we can try to read the file
     ps.on( 'exit', function() {
 	if (errored) {
+	    console.log("error: ",errored);
 	    done(errored);
 	} else {
 	    fs.readFile(outputFilename, 'utf-8', function(err, contents) {
@@ -154,10 +155,15 @@ app.post('/sha1/:hash', function(req, res) {
 		    }
 		});
 
+	    job.on('error', function(err){
+		res.status(500).send(err);
+	    });
+	    
 	    job.on('complete', function(result){
-		// BADBAD: need to set the content-type appropriately
+		res.setHeader('content-type', 'image/svg+xml');
 		res.send(result);
 	    });
+	    
 	} else {
 	    res.status(500).send("The provided hash does not match the provided content.");
 	}

@@ -1,6 +1,4 @@
-$(function() {
-    console.log("Processing TikZ...");
-
+document.addEventListener("DOMContentLoaded", function(event) { 
     function sha1(text) {
 	var enc = new TextEncoder(); // always utf-8
 	console.log(text);
@@ -18,16 +16,30 @@ $(function() {
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
 
-	    $.ajax({
-		type: "POST",
-		url: "http://localhost:3000/sha1/" + hexhash,
-		data: text
-	    }).done( function(data) {
-		var parser = new DOMParser();
-		var svg = parser.parseFromString(data,"text/xml").rootElement;
-		svg.style.overflow = 'visible';
-		elt.parentNode.replaceChild(svg, elt);
-	    });
+	    var xhr = new XMLHttpRequest();
+
+	    xhr.open('POST', "http://localhost:3000/sha1/" + hexhash);
+	    
+	    xhr.setRequestHeader('Content-Type', 'application/x-latex');
+	    
+	    xhr.onload = function() {
+		if (xhr.status === 200) {
+		    var parser = new DOMParser();
+		    var svg = parser.parseFromString(xhr.responseText,"text/xml").rootElement;
+		    svg.style.overflow = 'visible';
+		    elt.parentNode.replaceChild(svg, elt);
+		}
+		else if (xhr.status !== 200) {
+		    console.log( "tikzwolke error:", xhr.responseText );
+
+		    // Display the error in place
+		    var paragraph = document.createElement("p");
+		    var text = document.createTextNode("[TikzWolke error]");
+		    paragraph.appendChild(text);
+		    elt.parentNode.replaceChild(paragraph, elt);
+		}
+	    };
+	    xhr.send(text);
 	});
     }
     
