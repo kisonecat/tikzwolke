@@ -15,8 +15,6 @@ $(function() {
     function process(elt) {
 	var text = elt.childNodes[0].nodeValue;
 
-	console.log("PRocessing",elt);
-	
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
 
@@ -25,7 +23,10 @@ $(function() {
 		url: "http://localhost:3000/sha1/" + hexhash,
 		data: text
 	    }).done( function(data) {
-		console.log(data);
+		var parser = new DOMParser();
+		var svg = parser.parseFromString(data,"text/xml").rootElement;
+		svg.style.overflow = 'visible';
+		elt.parentNode.replaceChild(svg, elt);
 	    });
 	});
     }
