@@ -229,12 +229,10 @@ app.post('/sha1/:hash', function(req, res) {
     });
 });
 
-// BADBAD: include a version number
+const versionator = require('versionator').createBasic('v1');
+app.use('/public', versionator.middleware);
 app.use(express.static('public'));
 
 client.select(config.redis.database, function() {
     app.listen(3000, () => winston.info('tikzwolke listening on port 3000'));
 });
-
-
-

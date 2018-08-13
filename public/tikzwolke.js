@@ -1,3 +1,13 @@
+// Determine where we were loaded from; we'll use that to find a
+// tikzwolke host that can handle our POSTing tikz code
+var scripts = document.getElementsByTagName( "script" ); 
+var lastScript = scripts[scripts.length - 1]; 
+var url = new URL(lastScript.src);
+var urlRoot = url.protocol + "//" + url.hostname;
+if (url.port) {
+    urlRoot = urlRoot + ":" + url.port;
+}
+
 document.addEventListener("DOMContentLoaded", function(event) { 
     function sha1(text) {
 	var enc = new TextEncoder(); // always utf-8
@@ -9,8 +19,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 					x => ('00' + x.toString(16)).slice(-2)).join('');
     }
 
-    const urlRoot = "http://localhost:3000";
-    
     function downloadCachedCopy( hash ) {
 	return new Promise( function( resolve, reject ) {
 	    var xhr = new XMLHttpRequest();
