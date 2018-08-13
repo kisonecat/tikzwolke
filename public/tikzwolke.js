@@ -2,16 +2,13 @@
 // tikzwolke server that can handle our POSTing tikz code
 var currentScript = undefined;
 
-if (document.currentScript) {
-    currentScript = document.currentScript;
-} else {
-    currentScript = document.currentScript;
+// document.currentScript polyfill
+if (document.currentScript === undefined) {
     var scripts = document.getElementsByTagName( "script" ); 
-    currentScript = scripts[scripts.length - 1];
+    document.currentScript = scripts[scripts.length - 1];
 }
 
-// BADBAD: apparently URL isn't available on IE11
-var url = new URL(currentScript.src);
+var url = new URL(document.currentScript.src);
 var urlRoot = url.protocol + "//" + url.hostname;
 if (url.port) {
     urlRoot = urlRoot + ":" + url.port;
