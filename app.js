@@ -10,7 +10,6 @@ const config = require('./config');
 var client = redis.createClient({
     host: config.redis.host,
     port: config.redis.port,
-    max_attempts: 5,
     return_buffers: true
 });
 
