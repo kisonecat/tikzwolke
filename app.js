@@ -7,7 +7,6 @@ const spawn = require('child_process').spawn;
 const config = require('./config');
 const winston = require('winston');
 const expressWinston = require('express-winston');
-const rateLimit = require('express-rate-limit');
 
 // Setup redis
 const redis = require("redis");
@@ -166,11 +165,18 @@ app.get('/sha1/:hash', function(req, res) {
     });
 });
 
-var limiter = new rateLimit({
-    windowMs: 15*60*1000, // 15 minutes 
-    max: config.rateLimit, // limit each IP to so many requests per window
+
+var RateLimit = require('express-rate-limit');
+var RedisStore = require('rate-limit-redis');
+ 
+var limiter = new RateLimit({
+  store: new RedisStore({
+      client: client
+  }),
+    max: config.rateLimit, // limit each IP to so many requests per window    
     delayMs: 0 // full speed until the max limit is reached
 });
+ 
 
 app.use( '/sha1/:hash', limiter );
 
