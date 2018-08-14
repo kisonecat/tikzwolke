@@ -1,18 +1,14 @@
-// Determine where we were loaded from; we'll use that to find a
-// tikzwolke server that can handle our POSTing tikz code
-var currentScript = undefined;
-
 // document.currentScript polyfill
 if (document.currentScript === undefined) {
     var scripts = document.getElementsByTagName( "script" ); 
     document.currentScript = scripts[scripts.length - 1];
 }
 
+// Determine where we were loaded from; we'll use that to find a
+// tikzwolke server that can handle our POSTing tikz code
 var url = new URL(document.currentScript.src);
-var urlRoot = url.protocol + "//" + url.hostname;
-if (url.port) {
-    urlRoot = urlRoot + ":" + url.port;
-}
+// host includes the port
+var urlRoot = url.protocol + "//" + url.host;
 
 function sha1(text) {
     var enc = new TextEncoder(); // always utf-8

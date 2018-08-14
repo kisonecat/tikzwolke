@@ -58,12 +58,15 @@ config.redis.database = process.env.REDIS_DATABASE || 3;
 config.logging = true;
 
 /**
- * Session Configuration
+ * Cache Configuration
  */
 
 var hour              = 3600000;
 var day               = (hour * 24);
 var week              = (day * 7);
+var year              = (day * 365);
+
+config.cache = {};
+config.cache.ttl = day / 1000;
 
 module.exports = config;
-

@@ -134,6 +134,7 @@ jobs.process('tikz', function(job, done){
 		
 		// cache this in redis too
 		client.set( job.data.hash, svg );
+		client.expire( job.data.hash, config.cache.ttl );
 	    });
 	}	       
     });
