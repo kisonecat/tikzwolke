@@ -31,7 +31,7 @@ app.use(function(req, res, next) {
   next();
 });
 
-// Should have an actual "what is this project?" page
+// BADBAD: should just redirect to github
 app.get('/', (req, res) => res.send('Hello World!'));
 
 if (config.logging) {
@@ -56,6 +56,9 @@ var jobs = kue.createQueue({
 });
 
 jobs.process('tikz', function(job, done){
+    // BADBAD: instead of file:output.txt perhaps /dev/fd/2 so I can
+    // capture stderr?  Or a named pipe or something similar?  Then I
+    // think I could run more than one process?
     var args = [ '-hda',
 		 path.join(__dirname, 'qemu/cow.img'),
 		 '-m',
@@ -165,7 +168,7 @@ app.get('/sha1/:hash', function(req, res) {
     });
 });
 
-
+// Rate limit the POST endpoint since it is necessary slow
 var RateLimit = require('express-rate-limit');
 var RedisStore = require('rate-limit-redis');
  
@@ -236,8 +239,9 @@ app.post('/sha1/:hash', function(req, res) {
     });
 });
 
+// BADBAD: the /v1/ path is being ignored?
 const versionator = require('versionator').createBasic('v1');
-app.use('/public', versionator.middleware);
+app.use(versionator.middleware);
 app.use(express.static('public'));
 
 client.select(config.redis.database, function() {
