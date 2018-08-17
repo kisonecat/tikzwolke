@@ -7,6 +7,7 @@ const spawn = require('child_process').spawn;
 const config = require('./config');
 const winston = require('winston');
 const expressWinston = require('express-winston');
+const package = require('./package.json');
 
 // Setup redis
 const redis = require("redis");
@@ -31,8 +32,8 @@ app.use(function(req, res, next) {
   next();
 });
 
-// BADBAD: should just redirect to github
-app.get('/', (req, res) => res.send('Hello World!'));
+app.get('/', (req, res) =>
+	res.redirect(303, package.homepage ) );
 
 if (config.logging) {
     app.use(expressWinston.logger({
@@ -239,7 +240,6 @@ app.post('/sha1/:hash', function(req, res) {
     });
 });
 
-// BADBAD: the /v1/ path is being ignored?
 const versionator = require('versionator').createBasic('v1');
 app.use(versionator.middleware);
 app.use(express.static('public'));

@@ -6,6 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "homepage": "https://github.com/kisonecat/tikzwolke",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/kisonecat/tikzwolke.git"
+  },
   "author": "Jim Fowler",
   "license": "AGPL-3.0",
   "dependencies": {
