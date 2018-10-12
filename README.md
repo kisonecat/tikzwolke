@@ -19,8 +19,12 @@ Then in the `<body>`, include TikZ code such as
   \end{tikzpicture}
 </script>
 ```
+
 Your TikZ will be compiled (on the tikzwolke.com server) into SVGs;
 the `<script>` element will be replaced with the corresponding SVG.
+In this case, the stanza above will be replaced with
+
+<img src="http://images.tikzwolke.com/sha1/dc40db944d1e8f4ab868502fddf6b026710056af">
 
 Amazon S3 is used as a caching layer, so a TikZ image need only be
 rendered once globally.
