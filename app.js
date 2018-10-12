@@ -166,7 +166,7 @@ jobs.process('tikz', function(job, done){
 		    client.expire( job.data.hash, config.cache.ttl );
 
 		    var params = {Bucket: bucketName, Key: job.data.hash, Body: contents,
-				  "Content-Type": "image/svg+xml" };
+				  ContentType: "image/svg+xml" };
 		    s3.putObject(params, function(err, data) {
 			if (err) {
 			    winston.error(err);
