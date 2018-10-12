@@ -12,7 +12,7 @@
     // host includes the port
     var urlRoot = url.protocol + "//" + url.host;
 
-    var awsRoot = "https://s3.amazonaws.com/images.tikzwolke.com";
+    var awsRoot = "https://s3.us-east-2.amazonaws.com/images.tikzwolke.com";
 
     function sha1(text) {
 	var enc = new TextEncoder(); // always utf-8
