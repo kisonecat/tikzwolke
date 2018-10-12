@@ -1,13 +1,15 @@
 # TikZ Wolke
 
 TikZ Wolke is a service which converts `script` tags (containing TikZ
-code) into SVGs.
+code) into SVGs.  [Wolke is German for cloud.](https://en.wiktionary.org/wiki/Wolke)
+
+See a live demo at http://demo.tikzwolke.com/
 
 ## Example
 
 In the `<head>` of your HTML, include 
 ```html
-<script src="https://tikzwolke.com/v1/tikzwolke.js"></script>
+<script src="http://tikzwolke.com/v1/tikzwolke.js"></script>
 ```
 Then in the `<body>`, include TikZ code such as
 ```html
@@ -20,3 +22,5 @@ Then in the `<body>`, include TikZ code such as
 Your TikZ will be compiled (on the tikzwolke.com server) into SVGs;
 the `<script>` element will be replaced with the corresponding SVG.
 
+Amazon S3 is used as a caching layer, so a TikZ image need only be
+rendered once globally.
