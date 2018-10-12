@@ -7,7 +7,13 @@ const spawn = require('child_process').spawn;
 const config = require('./config');
 const winston = require('winston');
 const expressWinston = require('express-winston');
+const async = require('async');
 const package = require('./package.json');
+
+// bucket = images.tikzwolke.com
+const AWS = require('aws-sdk');
+var s3 = new AWS.S3();
+var bucketName = 'images.tikzwolke.com';
 
 // Setup redis
 const redis = require("redis");
@@ -56,50 +62,29 @@ var jobs = kue.createQueue({
     }
 });
 
-jobs.process('tikz', function(job, done){
-    // BADBAD: instead of file:output.txt perhaps /dev/fd/2 so I can
-    // capture stderr?  Or a named pipe or something similar?  Then I
-    // think I could run more than one process?
-    var args = [ '-hda',
-		 path.join(__dirname, 'qemu/cow.img'),
-		 '-m',
-		 '512',
-		 '-enable-kvm',
-		 '-loadvm',
-		 'booted',
-		 '-nographic',
-		 '-monitor', 'none', 
-		 '-serial',
-		 'stdio',
-		 '-serial',
-		 'file:output.txt' ];
-    
-    var outputFilename = path.join(__dirname, 'qemu/output.txt');
-    
-    var dir = path.join(__dirname, 'qemu');
-    var ps = spawn("/usr/bin/qemu-system-x86_64", args, { cwd: dir });
+// spawn command inside dir with args and wait until filename is
+// created or until a watchdog timer times out
+function runProcessUntilOutput( command, dir, args, filenameGoal, callback ) {
+    var ps = spawn(command, args, { cwd: dir });
 
     var errored = undefined;
     
-    // Kill the process unless it outputs something every seconds
+    // Kill the process unless it outputs something every second
     var watchdog;
     function resetWatchdog() {
 	if (watchdog) watchdog.close();	
-	watchdog = setTimeout( function() { errored = "output too slow"; ps.kill(); }, 1000 );
+	watchdog = setTimeout( function() { errored = command + " output too slow"; ps.kill(); }, 1000 );
     }
     resetWatchdog();
     
     function processLine(line) {
+	console.log(line);
 	winston.debug(" >",line);
 	resetWatchdog();
-
-	if (line.match( "@@@ finished" )) {
-	    ps.kill();
-	}
     }
 
-    // Only give it 10 seconds total
-    setTimeout( function() { errored = "pdflatex took too long"; ps.kill(); }, 10000 );
+    // Only give it a few seconds total
+    var timer = setTimeout( function() { errored = command + " took too long"; ps.kill(); }, 5000 );
 
     // Split the output into lines so we can process the output one line at a time
     var remainder = new Buffer('');
@@ -121,32 +106,78 @@ jobs.process('tikz', function(job, done){
     // When the process exits, we can try to read the file
     ps.on( 'exit', function() {
 	if (errored) {
-	    winston.error(errored);
-	    done(errored);
+	    clearTimeout( timer );
+	    callback(errored);
 	} else {
-	    fs.readFile(outputFilename, 'utf-8', function(err, contents) {
-		if (err) {
-                    return done(err);
-		}
-
-		var svg = Buffer.concat( contents.split("\n").map(
-		    (data) => new Buffer(data, 'base64') ) ).toString('utf-8');
-		
-		// should base64 decode this data
-		done(null,svg);
-		
-		// cache this in redis too
-		client.set( job.data.hash, svg );
-		client.expire( job.data.hash, config.cache.ttl );
-	    });
-	}	       
+	    callback(null);
+	}
     });
+
+    return ps;
+}
+
+jobs.process('tikz', function(job, done){
+    var args = [];
+    var dir = path.join(__dirname, 'latex');
+    var ps = spawn("/usr/bin/pdflatex", args, { cwd: dir });
+    var pdfGoal = path.join(dir, 'texput.pdf');
+    var svgGoal = path.join(dir, 'texput.svg');
+
+    var processPdf = function(callback) {
+	var ps = runProcessUntilOutput( "/usr/bin/pdflatex", dir, [], pdfGoal, callback );
+
+	function writer(s) {
+	    ps.stdin.write(s);
+	    console.log(s);
+	}
+	
+	// Feed the process with the data we want to process
+	writer( "\\documentclass{standalone}\n" );
+	writer( "\\usepackage{tikz}\n" );
+	if (job.data.body.match( "\\begin{document}" ) === null) {
+	    writer("\\begin{document}\n");
+	}
+	writer( job.data.body );
+	writer("\n\\end{document}\n");
+    };
     
-    // Feed the sandbox with the data we want to process
-    job.data.body.replace( "\\begin{document}", "" );
-    ps.stdin.write( job.data.body );
-    ps.stdin.write("\\end{document}\n");    
-    
+    async.series([
+	processPdf,
+	processPdf,
+	function(callback) {
+	    runProcessUntilOutput( "/usr/bin/mutool", dir, ['draw','-o',svgGoal,pdfGoal], svgGoal, callback );
+	},
+    ], function(err, results) {
+	if (err) {
+	    // BADBAD: cache errors
+	    winston.error(err);
+	    done(err);
+	} else {	    
+	    fs.readFile(svgGoal, 'utf-8', function(err, contents) {
+		if (err) {
+		    console.log("ERR");		    
+                    done(err);
+		} else {
+		    console.log(contents);
+		    done(null,contents);
+		
+		    // cache this in redis too
+		    client.set( job.data.hash, contents );
+		    client.expire( job.data.hash, config.cache.ttl );
+
+		    var params = {Bucket: bucketName, Key: job.data.hash, Body: contents,
+				  "Content-Type": "image/svg+xml" };
+		    s3.putObject(params, function(err, data) {
+			if (err) {
+			    winston.error(err);
+			} else {
+			    winston.info("s3 upload for " + job.data.hash);
+			}
+		    });
+		}
+	    });
+	}
+    });
 });
 
 app.get('/sha1/:hash', function(req, res) {

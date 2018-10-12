@@ -11,6 +11,7 @@
     var url = new URL(document.currentScript.src);
     // host includes the port
     var urlRoot = url.protocol + "//" + url.host;
+    var awsRoot = "https://s3.us-east-2.amazonaws.com/images.tikzwolke.com";
 
     function sha1(text) {
 	var enc = new TextEncoder(); // always utf-8
@@ -22,11 +23,11 @@
 					x => ('00' + x.toString(16)).slice(-2)).join('');
     }
 
-    function downloadCachedCopy( hash ) {
+    function downloadCachedCopy( url, hash ) {
 	return new Promise( function( resolve, reject ) {
 	    var xhr = new XMLHttpRequest();
 	    
-	    xhr.open('GET', urlRoot + "/" + hash);
+	    xhr.open('GET', url + "/" + hash);
 	    xhr.onload = function() {
 		if (xhr.status === 200) {
 		    var parser = new window.DOMParser();
@@ -48,36 +49,44 @@
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
 	    
-	    // First try a GET because those are likely to be cached
-	    // along the way; if that fails, then generate hashcash
-	    // for a high-priority but slow POST
-	    downloadCachedCopy( "sha1/" + hexhash )
+	    // First try a GET to AWS because those are likely to be
+	    // cached along the way
+	    downloadCachedCopy( awsRoot, "sha1/" + hexhash )
 		.then( (svg) => elt.parentNode.replaceChild(svg, elt) )
 		.catch( function(err) {
-		    var xhr = new XMLHttpRequest();
+		    // We missed the AWS cache, but maybe we cached it
+		    // locally
+		    downloadCachedCopy( urlRoot, "sha1/" + hexhash )
+			.then( (svg) => elt.parentNode.replaceChild(svg, elt) )
+			.catch( function(err) {
+			    // since we missed the cache, generate
+			    // hashcash for a high-priority but slow
+			    // POST
+			    var xhr = new XMLHttpRequest();
 		    
-		    xhr.open('POST', urlRoot + "/sha1/" + hexhash);
+			    xhr.open('POST', urlRoot + "/sha1/" + hexhash);
 		    
-		    xhr.setRequestHeader('Content-Type', 'application/x-latex');
+			    xhr.setRequestHeader('Content-Type', 'application/x-latex');
 		    
-		    xhr.onload = function() {
-			if (xhr.status === 200) {
-			    var parser = new window.DOMParser();
-			    var svg = parser.parseFromString(xhr.responseText,"text/xml").rootElement;
-			    svg.style.overflow = 'visible';
-			    elt.parentNode.replaceChild(svg, elt);
-			}
-			else if (xhr.status !== 200) {
-			    console.log( "tikzwolke error:", xhr.responseText );
-			    
-			    // Display the error in place
-			    var paragraph = document.createElement("p");
-			    var text = document.createTextNode("[TikzWolke error]");
-			    paragraph.appendChild(text);
-			    elt.parentNode.replaceChild(paragraph, elt);
-			}
-		    };
-		    xhr.send(text);		    
+			    xhr.onload = function() {
+				if (xhr.status === 200) {
+				    var parser = new window.DOMParser();
+				    var svg = parser.parseFromString(xhr.responseText,"text/xml").rootElement;
+				    svg.style.overflow = 'visible';
+				    elt.parentNode.replaceChild(svg, elt);
+				}
+				else if (xhr.status !== 200) {
+				    console.log( "tikzwolke error:", xhr.responseText );
+				    
+				    // Display the error in place
+				    var paragraph = document.createElement("p");
+				    var text = document.createTextNode("[TikzWolke error]");
+				    paragraph.appendChild(text);
+				    elt.parentNode.replaceChild(paragraph, elt);
+				}
+			    };
+			    xhr.send(text);		    
+			});
 		});
 	});
     }
