@@ -11,7 +11,8 @@
     var url = new URL(document.currentScript.src);
     // host includes the port
     var urlRoot = url.protocol + "//" + url.host;
-    var awsRoot = "https://s3.us-east-2.amazonaws.com/images.tikzwolke.com";
+
+    var awsRoot = "http://images.tikzwolke.com";
 
     function sha1(text) {
 	var enc = new TextEncoder(); // always utf-8
