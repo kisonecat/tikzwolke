@@ -40,7 +40,6 @@
 
     function process(elt) {
 	var text = elt.childNodes[0].nodeValue;
-	console.log("TEXT=",text);
 	
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
