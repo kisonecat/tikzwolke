@@ -24,40 +24,35 @@
 					x => ('00' + x.toString(16)).slice(-2)).join('');
     }
 
-    function downloadCachedCopy( url, hash ) {
+    function downloadCachedCopy( url ) {
 	return new Promise( function( resolve, reject ) {
-	    var xhr = new XMLHttpRequest();
-	    
-	    xhr.open('GET', url + "/" + hash);
-	    xhr.onload = function() {
-		if (xhr.status === 200) {
-		    var parser = new window.DOMParser();
-		    var svg = parser.parseFromString(xhr.responseText,"text/xml").rootElement;
-		    svg.style.overflow = 'visible';
-		    resolve(svg);
-		}
-		else if (xhr.status !== 200) {
-		    reject(xhr.responseText);
-		}
+	    var img = document.createElement('img');
+	    img.src = url;
+	    img.style.overflow = 'visible';	    
+	    img.onload = function () {
+		resolve(img);
 	    };
-	    xhr.send();
+	    img.onerror = function () {
+		reject();
+	    };
 	});
     }
 
     function process(elt) {
 	var text = elt.childNodes[0].nodeValue;
+	console.log("TEXT=",text);
 	
 	sha1(text).then( function(hash) {
 	    var hexhash = buf2hex(hash);
 	    
 	    // First try a GET to AWS because those are likely to be
 	    // cached along the way
-	    downloadCachedCopy( awsRoot, "sha1/" + hexhash )
+	    downloadCachedCopy( awsRoot + "/sha1/" + hexhash )
 		.then( (svg) => elt.parentNode.replaceChild(svg, elt) )
 		.catch( function(err) {
 		    // We missed the AWS cache, but maybe we cached it
 		    // locally
-		    downloadCachedCopy( urlRoot, "sha1/" + hexhash )
+		    downloadCachedCopy( urlRoot + "/sha1/" + hexhash )
 			.then( (svg) => elt.parentNode.replaceChild(svg, elt) )
 			.catch( function(err) {
 			    // since we missed the cache, generate
@@ -71,10 +66,10 @@
 		    
 			    xhr.onload = function() {
 				if (xhr.status === 200) {
-				    var parser = new window.DOMParser();
-				    var svg = parser.parseFromString(xhr.responseText,"text/xml").rootElement;
-				    svg.style.overflow = 'visible';
-				    elt.parentNode.replaceChild(svg, elt);
+				    var img = document.createElement('img');
+				    img.src = "data:image/svg+xml;base64," + window.btoa(xhr.responseText);
+				    img.style.overflow = 'visible';
+				    elt.parentNode.replaceChild(img, elt);
 				}
 				else if (xhr.status !== 200) {
 				    console.log( "tikzwolke error:", xhr.responseText );
