@@ -166,6 +166,7 @@ jobs.process('tikz', function(job, done){
 		    client.expire( job.data.hash, config.cache.ttl );
 
 		    var params = {Bucket: bucketName, Key: job.data.hash, Body: contents,
+				  CacheControl: 'public, max-age=31536000',
 				  ContentType: "image/svg+xml" };
 		    s3.putObject(params, function(err, data) {
 			if (err) {
