@@ -26,7 +26,10 @@ In this case, the stanza above would be replaced with
 
 <img src="http://images.tikzwolke.com/sha1/dc40db944d1e8f4ab868502fddf6b026710056af">
 
-Because tikzwolke.js relies on `crypto.window.subtle`, you must use https.
+Because tikzwolke.js relies on `crypto.window.subtle`, you must use
+https and a browser supporting WebCrypto.  Additionally, currently
+SHA1 hashes are used which aren't available on Edge.  <b>These bugs
+will be fixed (with an appropriate polyfill) in the 1.0 release.</b>
 
 Amazon S3 is used as a caching layer, so a TikZ image need only be
 rendered once globally.
