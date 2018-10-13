@@ -26,8 +26,6 @@ In this case, the stanza above would be replaced with
 
 <img src="http://images.tikzwolke.com/sha1/dc40db944d1e8f4ab868502fddf6b026710056af">
 
-albeit with `overflow: visible;` set so the box won't cut off part of the circle.
-
 Because tikzwolke.js relies on `crypto.window.subtle`, you must use https.
 
 Amazon S3 is used as a caching layer, so a TikZ image need only be
