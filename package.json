@@ -4,7 +4,8 @@
   "description": "TikZ cloud service",
   "main": "app.js",
   "scripts": {
-    "build": "rollup -c",
+      "build": "rollup -c",
+      "publish": "aws s3 cp public/tikzwolke.min.js s3://js.tikzwolke.com/v1/tikzwolke.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "homepage": "https://github.com/kisonecat/tikzwolke",
@@ -24,7 +25,6 @@
     "kue": "^0.11.6",
     "rate-limit-redis": "^1.5.0",
     "redis": "^2.8.0",
-    "versionator": "^2.0.0",
     "winston": "^1.0.1"
   },
   "devDependencies": {

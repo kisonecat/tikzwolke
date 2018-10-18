@@ -9,7 +9,7 @@ See a live demo at https://demo.tikzwolke.com/
 
 In the `<head>` of your HTML, include 
 ```html
-<script src="https://tikzwolke.com/v1/tikzwolke.js"></script>
+<script src="https://js.tikzwolke.com/v1/tikzwolke.js"></script>
 ```
 Then in the `<body>`, include TikZ code such as
 ```html
@@ -20,7 +20,7 @@ Then in the `<body>`, include TikZ code such as
 </script>
 ```
 
-Your TikZ will be compiled (on the tikzwolke.com server) into SVGs;
+Your TikZ will be compiled (on the `tikzwolke.com` server) into SVGs;
 the `<script>` element will be replaced with the corresponding SVG.
 In this case, the stanza above would be replaced with
 
