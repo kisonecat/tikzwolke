@@ -272,9 +272,28 @@ app.post('/sha1/:hash', function(req, res) {
     });
 });
 
-const versionator = require('versionator').createBasic('v1');
-app.use(versionator.middleware);
-app.use(express.static('public'));
+// BADBAD: add some caching to this
+function serveJavascript(req,res, next){
+    var options = {
+	root: __dirname + '/public/',
+	dotfiles: 'deny',
+	headers: {
+            'x-timestamp': Date.now(),
+	}
+    };
+    
+    res.sendFile("tikzwolke.min.js", options, function (err) {
+	if (err) {
+	    next(err);
+	} else {
+	    console.log('Sent tikzwolke.js');
+	}
+    });
+}
+
+app.get('/v:version/:filename.js', serveJavascript );
+app.get('/:filename.js', serveJavascript );
+app.get('/.js', serveJavascript );
 
 client.select(config.redis.database, function() {
     app.listen(3000, () => winston.info('tikzwolke listening on port 3000'));
