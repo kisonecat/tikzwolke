@@ -164,10 +164,6 @@ jobs.process('tikz', function (job, done) {
           console.log(contents);
           done(null, contents);
 
-          // cache this in redis too
-          client.set(job.data.hash, contents);
-          client.expire(job.data.hash, config.cache.ttl);
-
           var params = { Bucket: bucketName,
             Key: job.data.hash,
             Body: contents,
@@ -182,26 +178,6 @@ jobs.process('tikz', function (job, done) {
           });
         }
       });
-    }
-  });
-});
-
-app.get('/sha1/:hash', function (req, res) {
-  var hash = req.params.hash;
-  var hashFunction = 'sha1';
-  var multihash = hashFunction + '/' + hash;
-
-  client.get(multihash, function (err, val) {
-    if (err) {
-      res.status(500).send(err);
-    } else {
-      if (val) {
-        res.setHeader('content-type', 'image/svg+xml');
-        res.set('Cache-Control', 'public, max-age=31536000');
-        res.send(val);
-      } else {
-        res.status(404).send('Cached content not found.');
-      }
     }
   });
 });
@@ -230,47 +206,38 @@ app.post('/sha1/:hash', function (req, res) {
   var hashFunction = 'sha1';
   var multihash = hashFunction + '/' + hash;
 
-  // if the hash is available, just serve the .svg immediately and
-  // don't even bother receiving any data from the client
-  client.get(multihash, function (err, val) {
-    if ((!err) && (val)) {
-      res.setHeader('content-type', 'image/svg+xml');
-      res.send(val);
+  // we haven't already processed this image, so process it.
+  var shasum = crypto.createHash('sha1');
+
+  var data = '';
+
+  req.on('data', function (chunk) {
+    shasum.update(chunk);
+    data += chunk;
+  });
+  req.on('end', function () {
+    var computedHash = shasum.digest('hex');
+
+    if (computedHash === hash) {
+      var job = jobs.create('tikz', { body: data, hash: multihash })
+          .ttl(30 * 1000) // value in milliseconds
+          .removeOnComplete(true)
+          .save(function (err) {
+            if (err) {
+              res.status(500).send(err);
+            }
+          });
+
+      job.on('error', function (err) {
+        res.status(500).send(err);
+      });
+
+      job.on('complete', function (result) {
+        res.setHeader('content-type', 'image/svg+xml');
+        res.send(result);
+      });
     } else {
-      // we haven't already processed this image, so process it.
-      var shasum = crypto.createHash('sha1');
-
-      var data = '';
-
-      req.on('data', function (chunk) {
-        shasum.update(chunk);
-        data += chunk;
-      });
-      req.on('end', function () {
-        var computedHash = shasum.digest('hex');
-
-        if (computedHash === hash) {
-          var job = jobs.create('tikz', { body: data, hash: multihash })
-            .ttl(30 * 1000) // value in milliseconds
-            .removeOnComplete(true)
-            .save(function (err) {
-              if (err) {
-                res.status(500).send(err);
-              }
-            });
-
-          job.on('error', function (err) {
-            res.status(500).send(err);
-          });
-
-          job.on('complete', function (result) {
-            res.setHeader('content-type', 'image/svg+xml');
-            res.send(result);
-          });
-        } else {
-          res.status(500).send('The provided hash does not match the provided content.');
-        }
-      });
+      res.status(500).send('The provided hash does not match the provided content.');
     }
   });
 });
