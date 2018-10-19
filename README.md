@@ -9,7 +9,7 @@ See a live demo at https://demo.tikzwolke.com/
 
 In the `<head>` of your HTML, include 
 ```html
-<script src="https://js.tikzwolke.com/v1/tikzwolke.js"></script>
+<script src="https://tikzwolke.com/v1/tikzwolke.js"></script>
 ```
 Then in the `<body>`, include TikZ code such as
 ```html
