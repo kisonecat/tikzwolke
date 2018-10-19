@@ -127,7 +127,8 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
         }
 
         // Feed the process with the data we want to process
-        writer('\\documentclass[tikz]{standalone}\n');
+        writer('\\documentclass{standalone}\n');
+        writer('\\usepackage{tikz}\n');        
         if (job.data.body.match('\\\\begin *{document}') === null) {
           writer('\\begin{document}\n');
         }
@@ -149,8 +150,8 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
           cleanupCallback();
         } else {
           fs.readFile(svgGoal, 'utf-8', function (err, contents) {
-            cleanupCallback();              
-            
+            cleanupCallback();
+
             if (err) {
               console.log('ERR');
               done(err);
