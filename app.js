@@ -128,7 +128,7 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
 
         // Feed the process with the data we want to process
         writer('\\documentclass{standalone}\n');
-        writer('\\usepackage{tikz}\n');        
+        writer('\\usepackage{tikz}\n');
         if (job.data.body.match('\\\\begin *{document}') === null) {
           writer('\\begin{document}\n');
         }

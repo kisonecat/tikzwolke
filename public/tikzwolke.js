@@ -11,8 +11,7 @@ if (document.currentScript === undefined) {
 var url = new URL(document.currentScript.src);
 // host includes the port
 var host = url.host;
-if (host == 'js.tikzwolke.com')
-  host = 'tikzwolke.com';
+if (host === 'js.tikzwolke.com') { host = 'tikzwolke.com'; }
 var urlRoot = url.protocol + '//' + host;
 
 var awsRoot = 'https://s3.us-east-2.amazonaws.com/images.tikzwolke.com';
@@ -26,7 +25,7 @@ function downloadCachedCopy (url) {
       resolve(img);
     };
     img.onerror = function () {
-      reject("cache missed");
+      reject(new Error('cache missed'));
     };
   });
 }
@@ -39,12 +38,12 @@ function process (elt) {
     // cached along the way
     downloadCachedCopy(awsRoot + '/sha1/' + hexhash)
       .then((svg) => elt.parentNode.replaceChild(svg, elt))
-      .catch(function (err) {
+      .catch(function () {
         // We missed the AWS cache, but maybe we cached it
         // locally
         downloadCachedCopy(urlRoot + '/sha1/' + hexhash)
           .then((svg) => elt.parentNode.replaceChild(svg, elt))
-          .catch(function (err) {
+          .catch(function () {
             // since we missed the cache, generate
             // hashcash for a high-priority but slow
             // POST
