@@ -1,3 +1,7 @@
 module.exports = {
-    "extends": "semistandard"
+  "extends": "semistandard",
+  "env": {
+    "browser": 1
+  }
 };
+
