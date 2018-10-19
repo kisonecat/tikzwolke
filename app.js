@@ -9,6 +9,7 @@ const winston = require('winston');
 const expressWinston = require('express-winston');
 const async = require('async');
 const packageJson = require('./package.json');
+const tmp = require('tmp');
 
 // bucket = images.tikzwolke.com
 const AWS = require('aws-sdk');
@@ -122,58 +123,66 @@ function runProcessUntilOutput (command, dir, args, filenameGoal, callback) {
   return ps;
 }
 
-jobs.process('tikz', function (job, done) {
-  var dir = path.join(__dirname, 'latex');
-  var pdfGoal = path.join(dir, 'texput.pdf');
-  var svgGoal = path.join(dir, 'texput.svg');
-
-  var processPdf = function (callback) {
-    var ps = runProcessUntilOutput('/usr/bin/pdflatex', dir, [], pdfGoal, callback);
-
-    function writer (s) {
-      ps.stdin.write(s);
-      console.log(s);
-    }
-
-    // Feed the process with the data we want to process
-    writer('\\documentclass[tikz]{standalone}\n');
-    if (job.data.body.match('\\\\begin *{document}') === null) {
-      writer('\\begin{document}\n');
-    }
-    writer(job.data.body);
-    writer('\n\\end{document}\n');
-  };
-
-  async.series([
-    processPdf,
-    processPdf,
-    function (callback) {
-      runProcessUntilOutput('/usr/bin/mutool', dir, ['draw', '-o', svgGoal, pdfGoal], svgGoal, callback);
-    }
-  ], function (err, results) {
+jobs.process('tikz', config.concurrentLatex, function (job, done) {
+  tmp.dir({ unsafeCleanup: true }, function(err, dir, cleanupCallback) {
     if (err) {
-      // BADBAD: cache errors
       winston.error(err);
       done(err);
     } else {
-      fs.readFile(svgGoal, 'utf-8', function (err, contents) {
+      var pdfGoal = path.join(dir, 'texput.pdf');
+      var svgGoal = path.join(dir, 'texput.svg');
+
+      var processPdf = function (callback) {
+        var ps = runProcessUntilOutput('/usr/bin/pdflatex', dir, [], pdfGoal, callback);
+        
+        function writer (s) {
+          ps.stdin.write(s);
+          console.log(s);
+        }
+        
+        // Feed the process with the data we want to process
+        writer('\\documentclass[tikz]{standalone}\n');
+        if (job.data.body.match('\\\\begin *{document}') === null) {
+          writer('\\begin{document}\n');
+        }
+        writer(job.data.body);
+        writer('\n\\end{document}\n');
+      };
+      
+      async.series([
+        processPdf,
+        processPdf,
+        function (callback) {
+          runProcessUntilOutput('/usr/bin/mutool', dir, ['draw', '-o', svgGoal, pdfGoal], svgGoal, callback);
+        }
+      ], function (err, results) {
+        cleanupCallback();
+        
         if (err) {
-          console.log('ERR');
+          // BADBAD: cache errors
+          winston.error(err);
           done(err);
         } else {
-          console.log(contents);
-          done(null, contents);
-
-          var params = { Bucket: bucketName,
-            Key: job.data.hash,
-            Body: contents,
-            CacheControl: 'public, max-age=31536000',
-            ContentType: 'image/svg+xml' };
-          s3.putObject(params, function (err, data) {
+          fs.readFile(svgGoal, 'utf-8', function (err, contents) {
             if (err) {
-              winston.error(err);
+              console.log('ERR');
+              done(err);
             } else {
-              winston.info('s3 upload for ' + job.data.hash);
+              console.log(contents);
+              done(null, contents);
+              
+              var params = { Bucket: bucketName,
+                             Key: job.data.hash,
+                             Body: contents,
+                             CacheControl: 'public, max-age=31536000',
+                             ContentType: 'image/svg+xml' };
+              s3.putObject(params, function (err, data) {
+                if (err) {
+                  winston.error(err);
+                } else {
+                  winston.info('s3 upload for ' + job.data.hash);
+                }
+              });
             }
           });
         }
@@ -182,7 +191,7 @@ jobs.process('tikz', function (job, done) {
   });
 });
 
-// Rate limit the POST endpoint since it is necessary slow
+// Rate limit the POST endpoint since it is necessarily slow
 var RateLimit = require('express-rate-limit');
 var RedisStore = require('rate-limit-redis');
 
@@ -242,7 +251,7 @@ app.post('/sha1/:hash', function (req, res) {
   });
 });
 
-// BADBAD: add some caching to this
+// BADBAD: add some caching to this?
 function serveJavascript (req, res, next) {
   var options = {
     root: path.join(__dirname, '/public/'),

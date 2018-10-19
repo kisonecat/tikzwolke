@@ -4,9 +4,8 @@
  * Module Dependencies
  */
 
-var pkg               = require('./package.json');
-var dotenv            = require('dotenv');
-var path              = require('path');
+var pkg = require('./package.json');
+var dotenv = require('dotenv');
 
 // *For Development Purposes*
 // Read in environment vars from .env file
@@ -25,16 +24,16 @@ dotenv.load();
  *
  */
 
-var config            = {};
+var config = {};
 
 // From package.json
-config.name           = pkg.name;
-config.version        = pkg.version;
-config.description    = pkg.description;
-config.company        = pkg.company;
-config.author         = pkg.author;
-config.keywords       = pkg.keywords;
-config.environment    = process.env.NODE_ENV || 'development';
+config.name = pkg.name;
+config.version = pkg.version;
+config.description = pkg.description;
+config.company = pkg.company;
+config.author = pkg.author;
+config.keywords = pkg.keywords;
+config.environment = process.env.NODE_ENV || 'development';
 
 config.port = process.env.PORT || 3000;
 config.root = process.env.ROOT_URL || ('http://localhost:' + config.port);
@@ -47,9 +46,9 @@ config.rateLimit = 100;
  * Database Configuration
  */
 
-config.redis          = {};
-config.redis.host     = process.env.REDIS_HOST || '127.0.0.1';
-config.redis.port     = process.env.REDIS_PORT || 6379;
+config.redis = {};
+config.redis.host = process.env.REDIS_HOST || '127.0.0.1';
+config.redis.port = process.env.REDIS_PORT || 6379;
 config.redis.database = process.env.REDIS_DATABASE || 3;
 
 /**
@@ -61,12 +60,17 @@ config.logging = true;
  * Cache Configuration
  */
 
-var hour              = 3600000;
-var day               = (hour * 24);
-var week              = (day * 7);
-var year              = (day * 365);
+var hour = 3600000;
+var day = (hour * 24);
+var year = (day * 365);
 
 config.cache = {};
-config.cache.ttl = day / 1000;
+config.cache.ttl = year / 12;
+
+/**
+ * Concurrency Configuration
+ */
+
+config.concurrentLatex = 5; // how many LaTeX processes to run simultaneously
 
 module.exports = config;
