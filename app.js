@@ -11,23 +11,9 @@ const async = require('async');
 const packageJson = require('./package.json');
 const tmp = require('tmp');
 
-// bucket = images.tikzwolke.com
 const AWS = require('aws-sdk');
 var s3 = new AWS.S3();
 var bucketName = 'images.tikzwolke.com';
-
-// Setup redis
-const redis = require('redis');
-
-var client = redis.createClient({
-  host: config.redis.host,
-  port: config.redis.port,
-  return_buffers: true
-});
-
-client.on('error', function (err) {
-  winston.error(err);
-});
 
 // Setup express
 const app = express();
@@ -124,7 +110,7 @@ function runProcessUntilOutput (command, dir, args, filenameGoal, callback) {
 }
 
 jobs.process('tikz', config.concurrentLatex, function (job, done) {
-  tmp.dir({ unsafeCleanup: true }, function(err, dir, cleanupCallback) {
+  tmp.dir({ unsafeCleanup: true }, function (err, dir, cleanupCallback) {
     if (err) {
       winston.error(err);
       done(err);
@@ -134,12 +120,12 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
 
       var processPdf = function (callback) {
         var ps = runProcessUntilOutput('/usr/bin/pdflatex', dir, [], pdfGoal, callback);
-        
+
         function writer (s) {
           ps.stdin.write(s);
           console.log(s);
         }
-        
+
         // Feed the process with the data we want to process
         writer('\\documentclass[tikz]{standalone}\n');
         if (job.data.body.match('\\\\begin *{document}') === null) {
@@ -148,7 +134,7 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
         writer(job.data.body);
         writer('\n\\end{document}\n');
       };
-      
+
       async.series([
         processPdf,
         processPdf,
@@ -157,7 +143,7 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
         }
       ], function (err, results) {
         cleanupCallback();
-        
+
         if (err) {
           // BADBAD: cache errors
           winston.error(err);
@@ -170,7 +156,7 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
             } else {
               console.log(contents);
               done(null, contents);
-              
+
               var params = { Bucket: bucketName,
                              Key: job.data.hash,
                              Body: contents,
@@ -193,12 +179,8 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
 
 // Rate limit the POST endpoint since it is necessarily slow
 var RateLimit = require('express-rate-limit');
-var RedisStore = require('rate-limit-redis');
 
 var limiter = new RateLimit({
-  store: new RedisStore({
-    client: client
-  }),
   max: config.rateLimit, // limit each IP to so many requests per window
   delayMs: 0 // full speed until the max limit is reached
 });
@@ -273,6 +255,4 @@ app.get('/v:version/:filename.js', serveJavascript);
 app.get('/:filename.js', serveJavascript);
 app.get('/.js', serveJavascript);
 
-client.select(config.redis.database, function () {
-  app.listen(3000, () => winston.info('tikzwolke listening on port 3000'));
-});
+app.listen(3000, () => winston.info('tikzwolke listening on port 3000'));
