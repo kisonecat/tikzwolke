@@ -1,3 +1,5 @@
+import sha1 from './sha1';
+
 // document.currentScript polyfill
 if (document.currentScript === undefined) {
   var scripts = document.getElementsByTagName('script');
@@ -11,16 +13,6 @@ var url = new URL(document.currentScript.src);
 var urlRoot = url.protocol + '//' + url.host;
 
 var awsRoot = 'https://s3.us-east-2.amazonaws.com/images.tikzwolke.com';
-
-function sha1 (text) {
-  var enc = new TextEncoder(); // always utf-8
-  return window.crypto.subtle.digest('SHA-1', enc.encode(text));
-}
-
-function buf2hex (buffer) {
-  return Array.prototype.map.call(new Uint8Array(buffer),
-    x => ('00' + x.toString(16)).slice(-2)).join('');
-}
 
 function downloadCachedCopy (url) {
   return new Promise(function (resolve, reject) {
@@ -39,8 +31,7 @@ function downloadCachedCopy (url) {
 function process (elt) {
   var text = elt.childNodes[0].nodeValue;
 
-  sha1(text).then(function (hash) {
-    var hexhash = buf2hex(hash);
+    sha1(text).then(function (hexhash) {
 
     // First try a GET to AWS because those are likely to be
     // cached along the way
