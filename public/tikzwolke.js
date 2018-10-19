@@ -10,7 +10,10 @@ if (document.currentScript === undefined) {
 // tikzwolke server that can handle our POSTing tikz code
 var url = new URL(document.currentScript.src);
 // host includes the port
-var urlRoot = url.protocol + '//' + url.host;
+var host = url.host;
+if (host == 'js.tikzwolke.com')
+  host = 'tikzwolke.com';
+var urlRoot = url.protocol + '//' + host;
 
 var awsRoot = 'https://s3.us-east-2.amazonaws.com/images.tikzwolke.com';
 
@@ -23,7 +26,7 @@ function downloadCachedCopy (url) {
       resolve(img);
     };
     img.onerror = function () {
-      reject();
+      reject("cache missed");
     };
   });
 }
@@ -31,8 +34,7 @@ function downloadCachedCopy (url) {
 function process (elt) {
   var text = elt.childNodes[0].nodeValue;
 
-    sha1(text).then(function (hexhash) {
-
+  sha1(text).then(function (hexhash) {
     // First try a GET to AWS because those are likely to be
     // cached along the way
     downloadCachedCopy(awsRoot + '/sha1/' + hexhash)
