@@ -142,14 +142,15 @@ jobs.process('tikz', config.concurrentLatex, function (job, done) {
           runProcessUntilOutput('/usr/bin/mutool', dir, ['draw', '-o', svgGoal, pdfGoal], svgGoal, callback);
         }
       ], function (err, results) {
-        cleanupCallback();
-
         if (err) {
           // BADBAD: cache errors
           winston.error(err);
           done(err);
+          cleanupCallback();
         } else {
           fs.readFile(svgGoal, 'utf-8', function (err, contents) {
+            cleanupCallback();              
+            
             if (err) {
               console.log('ERR');
               done(err);
