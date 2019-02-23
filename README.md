@@ -1,6 +1,6 @@
 # TikZ Wolke
 
-**If you are interested in this, you are likely more interested in [TikZJax](https://github.com/kisonecat/tikzjax), though which TikZ runs entirely in the browser in WebAssembly.**
+**If you are interested in this, you are likely more interested in [TikZJax](https://github.com/kisonecat/tikzjax), through which TikZ runs entirely in the browser in WebAssembly.**
 
 TikZ Wolke is a service which converts `script` tags (containing TikZ
 code) into SVGs.  [Wolke is German for cloud.](https://en.wiktionary.org/wiki/Wolke)
